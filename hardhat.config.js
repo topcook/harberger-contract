@@ -21,18 +21,29 @@ task("accounts", "Prints the list of accounts", async () => {
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  defaultNetwork: "testnet",
+  defaultNetwork: "ropsten",
   networks: {
     localhost: {
       url: "http://127.0.0.1:8545"
     },
     hardhat: {
     },
-    testnet: {
-      // url: "https://data-seed-prebsc-1-s1.binance.org:8545",// for bsc test net
+    rinkeby: {
       url: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", //for rinkeby
-      // chainId: 97, //for bsc test net
       chainId: 4, //for rinkeby
+      // gasPrice: 20000000000,
+      accounts: {mnemonic: MNEMONIC}
+    },
+    ropsten: {
+      url: "https://ropsten.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161", //for rinkeby
+      // chainId: 97, //for bsc test net
+      chainId: 3, //for rinkeby
+      // gasPrice: 20000000000,
+      accounts: {mnemonic: MNEMONIC}
+    },
+    bsctestnet: {
+      url: "https://data-seed-prebsc-1-s1.binance.org:8545",// for bsc test net
+      chainId: 97, //for bsc test net
       // gasPrice: 20000000000,
       accounts: {mnemonic: MNEMONIC}
     },
