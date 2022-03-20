@@ -314,7 +314,7 @@ contract HarbergerTaxed_v7 is Ownable, ReentrancyGuard {
         uint32 _ownershipPeriod,
         uint16 _harbergerHike,
         uint16 _harbergerTax,
-        uint16 _initialPrice,
+        uint256 _initialPrice,
         string memory _valueOfString
         ) public onlyIssuer {
             harbergerInfo.ownershipPeriod = _ownershipPeriod * SECONDS_IN_DAY;
