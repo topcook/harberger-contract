@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 /**
  * @title HarbergerTaxed_v1
  */
-contract HarbergerTaxed_v5 is Ownable, ReentrancyGuard {
+contract HarbergerTaxed_v7 is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     struct HarbergerInfo {
@@ -34,7 +34,7 @@ contract HarbergerTaxed_v5 is Ownable, ReentrancyGuard {
     }
 
     // address of the ERC20 token
-    IERC20 private immutable _token;
+    IERC20 private _token;
 
     address public issuer;
 
@@ -54,8 +54,17 @@ contract HarbergerTaxed_v5 is Ownable, ReentrancyGuard {
 
     event DelayEndTimeOfOwnershipEvent(address indexed account);
 
+    event ValueOfStringChangedEvent(string indexed valueOfString);
+
+    event ValueOfSettingsChangedEvent();
+
     modifier notIssuer() {
         require(harbergerInfo.owner != issuer);
+        _;
+    }
+
+    modifier onlyIssuer() {
+        require(harbergerInfo.owner == issuer);
         _;
     }
 
@@ -141,8 +150,17 @@ contract HarbergerTaxed_v5 is Ownable, ReentrancyGuard {
         );
     }
 
+    function getIssuer() public view returns (address) {
+        return issuer;
+    }
+
+    function getOwner() public view returns (address) {
+        return harbergerInfo.owner;
+    }
+
     function getOwnershipPeriod() public view returns (uint32) {
-        return harbergerInfo.ownershipPeriod;
+        uint32 days_ = harbergerInfo.ownershipPeriod / SECONDS_IN_DAY;
+        return days_;
     }
 
     function getHarbergerHike() public view returns (uint32) {
@@ -220,7 +238,7 @@ contract HarbergerTaxed_v5 is Ownable, ReentrancyGuard {
         uint256 harbergerTax = harbergerInfo.harbergerTax;
         uint256 initialPrice = harbergerInfo.initialPrice;
         uint256 ownershipPeriod = harbergerInfo.ownershipPeriod;
-        uint256 currentTime = block.timestamp;      
+        uint256 currentTime = block.timestamp;   
 
         require(_amount >= initialPrice * harbergerTax / 100, "Token amount is not enough");
         require(endTime - currentTime < ownershipPeriod, "You have already delayed end time of ownership");
@@ -261,5 +279,52 @@ contract HarbergerTaxed_v5 is Ownable, ReentrancyGuard {
         uint32 ownershipPeriod = _days * SECONDS_IN_DAY;
         harbergerInfo.ownershipPeriod = ownershipPeriod;
         emit OwnershipPeriodChangedEvent(ownershipPeriod);
+    }
+
+    function getTokenAddress() public onlyIssuer view returns (address) {
+        return address(_token);
+    }
+
+    /**
+     * @notice Creates a new vesting schedule for an account.
+     * @param token_ address of token
+     */
+    function setTokenAddress(address token_) public onlyIssuer {
+        _token = IERC20(token_);
+    }
+
+    /**
+     * @notice Updates value of string
+     * @param _valueOfString value of string to be updated
+     */
+    function setValueOfString(string memory _valueOfString) public onlyOwnerOfHarberger {
+        harbergerInfo.valueOfString = _valueOfString;
+        emit ValueOfStringChangedEvent(_valueOfString);
+    }
+
+    /**
+     * @notice Updates settings
+     * @param _ownershipPeriod value of string to be updated
+     * @param _harbergerHike value of Harberger Hike
+     * @param _harbergerTax value of Harberger Tax
+     * @param _initialPrice value of Initial Price
+     * @param _valueOfString value of string to be updated
+     */
+    function setValueOfSettings(
+        uint32 _ownershipPeriod,
+        uint16 _harbergerHike,
+        uint16 _harbergerTax,
+        uint16 _initialPrice,
+        string memory _valueOfString
+        ) public onlyIssuer {
+            harbergerInfo.ownershipPeriod = _ownershipPeriod * SECONDS_IN_DAY;
+            harbergerInfo.harbergerHike = _harbergerHike;
+            harbergerInfo.harbergerTax = _harbergerTax;
+            harbergerInfo.initialPrice = _initialPrice;
+            if (keccak256(abi.encodePacked((_valueOfString))) != keccak256(abi.encodePacked(('Owner is not issuer'))))
+            // if (_valueOfString != 'Owner is not issuer') 
+                harbergerInfo.valueOfString = _valueOfString;
+
+            emit ValueOfSettingsChangedEvent();
     }
 }
