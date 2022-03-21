@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 /**
  * @title HarbergerTaxed_v1
  */
-contract HarbergerTaxed_v8 is Ownable, ReentrancyGuard {
+contract HarbergerTaxed_v9 is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     struct HarbergerInfo {
