@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 /**
  * @title HarbergerTaxed_v1
  */
-contract HarbergerTaxed_v9 is Ownable, ReentrancyGuard {
+contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     struct HarbergerInfo {
@@ -227,14 +227,14 @@ contract HarbergerTaxed_v9 is Ownable, ReentrancyGuard {
      * @notice Delay endTime of ownership
      * @param _amount amount of tokens to pay for delaying the endTime of ownership     
      */
-    function DelayEndTimeOfOwnership(uint256 _amount) public notIssuer onlyOwnerOfHarberger {
+    function DelayEndTimeOfOwnership() public notIssuer onlyOwnerOfHarberger {
         uint256 endTime = harbergerInfo.endTime;
         uint256 harbergerTax = harbergerInfo.harbergerTax;
         uint256 initialPrice = harbergerInfo.initialPrice;
         uint256 ownershipPeriod = harbergerInfo.ownershipPeriod;
-        uint256 currentTime = block.timestamp;   
+        uint256 currentTime = block.timestamp;
 
-        require(_amount >= initialPrice * harbergerTax / 100, "Token amount is not enough");
+        uint256 _amount = initialPrice * harbergerTax / 100;
         require(endTime - currentTime < ownershipPeriod, "You have already delayed end time of ownership");
         _token.transferFrom(msg.sender, issuer, _amount);
         harbergerInfo.endTime = endTime + ownershipPeriod;
