@@ -328,7 +328,7 @@ contract HarbergerTaxed_v8 is Ownable, ReentrancyGuard {
             emit ValueOfSettingsChangedEvent();
     }
 
-    function getCurrentTimeStamp() public view returns (uint256) {
-        return block.timestamp;
-    }
+    // function getCurrentTimeStamp() public view returns (uint256) {
+    //     return block.timestamp;
+    // }
 }
