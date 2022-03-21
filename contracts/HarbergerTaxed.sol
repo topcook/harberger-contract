@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 /**
  * @title HarbergerTaxed_v1
  */
-contract HarbergerTaxed_v7 is Ownable, ReentrancyGuard {
+contract HarbergerTaxed_v8 is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     struct HarbergerInfo {
@@ -213,7 +213,7 @@ contract HarbergerTaxed_v7 is Ownable, ReentrancyGuard {
      * @notice Transfer ownership of string to other wallet at first
      * @param _amount amount of tokens to pay for ownership at first
      */
-    function TransferOwnershipOfHarbergerAtFirst(uint256 _amount) private {
+    function TransferOwnershipOfHarbergerAtFirst(uint256 _amount) public {
         uint256 initialPrice = harbergerInfo.initialPrice;
         uint256 harbergerTax = harbergerInfo.harbergerTax;
         require(_amount >= initialPrice, "Token amount is not enough");
@@ -252,7 +252,7 @@ contract HarbergerTaxed_v7 is Ownable, ReentrancyGuard {
      * @notice Transfer ownership of string to other wallet at second phase
      * @param _amount amount of tokens to pay for ownership at second phase
      */
-    function TransferOwnershipOfHarbergerAtSecond(uint256 _amount) private {
+    function TransferOwnershipOfHarbergerAtSecond(uint256 _amount) public {
         uint256 finalPrice = harbergerInfo.finalPrice;
         uint16 harbergerTax = harbergerInfo.harbergerTax;
         uint16 harbergerHike = harbergerInfo.harbergerHike;
@@ -326,5 +326,9 @@ contract HarbergerTaxed_v7 is Ownable, ReentrancyGuard {
                 harbergerInfo.valueOfString = _valueOfString;
 
             emit ValueOfSettingsChangedEvent();
+    }
+
+    function getCurrentTimeStamp() public view returns (uint256) {
+        return block.timestamp;
     }
 }
