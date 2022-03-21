@@ -225,7 +225,6 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
 
     /**
      * @notice Delay endTime of ownership
-     * @param _amount amount of tokens to pay for delaying the endTime of ownership     
      */
     function DelayEndTimeOfOwnership() public notIssuer onlyOwnerOfHarberger {
         uint256 endTime = harbergerInfo.endTime;
