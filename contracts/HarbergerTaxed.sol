@@ -155,7 +155,7 @@ contract HarbergerTaxed_v9 is Ownable, ReentrancyGuard {
     }
 
     function getOwner() public view returns (address) {
-        if (harbergerInfo.endTime < block.timestamp)
+        if (harbergerInfo.endTime > block.timestamp)
             return harbergerInfo.owner;
         else 
             return issuer;
