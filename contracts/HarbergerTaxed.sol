@@ -59,17 +59,17 @@ contract HarbergerTaxed_v8 is Ownable, ReentrancyGuard {
     event ValueOfSettingsChangedEvent();
 
     modifier notIssuer() {
-        require(harbergerInfo.owner != issuer);
+        require(msg.sender != issuer, "You are the issuer of Harberger");
         _;
     }
 
     modifier onlyIssuer() {
-        require(harbergerInfo.owner == issuer);
+        require(msg.sender == issuer, "You are not the issuer of Harberger");
         _;
     }
 
     modifier onlyOwnerOfHarberger() {
-        require(msg.sender == harbergerInfo.owner);
+        require(getOwner() == msg.sender, "You are not the owner of Harberger");
         _;
     }
 
@@ -90,7 +90,7 @@ contract HarbergerTaxed_v8 is Ownable, ReentrancyGuard {
         uint256 startTime = block.timestamp;
         // timestamp when ownership ended
         // uint32 endTime = block.timestamp + ownershipPeriod;
-        uint256 endTime = block.timestamp + 60 * 60 * 24 * 365 * 10;
+        uint256 endTime = block.timestamp + 60 * 60 * 24 * 365 * 50;// endTime of issuer: 50 years
         // value of Harberger Hike
         uint16 harbergerHike = 20;
         // value of Harberger Tx
@@ -155,7 +155,10 @@ contract HarbergerTaxed_v8 is Ownable, ReentrancyGuard {
     }
 
     function getOwner() public view returns (address) {
-        return harbergerInfo.owner;
+        if (harbergerInfo.endTime < block.timestamp)
+            return harbergerInfo.owner;
+        else 
+            return issuer;
     }
 
     function getOwnershipPeriod() public view returns (uint32) {
@@ -188,23 +191,14 @@ contract HarbergerTaxed_v8 is Ownable, ReentrancyGuard {
      * @param _amount amount of tokens to pay for ownership
      */
     function TransferOwnershipOfHarberger(uint256 _amount) public {
-        address owner = harbergerInfo.owner;
-        uint256 endTime = harbergerInfo.endTime;
+        address owner = getOwner();
 
         if (owner == issuer) {
             //first sale
             TransferOwnershipOfHarbergerAtFirst(_amount);
         } else {
-            if (endTime >block.timestamp) {
-                //seconde sale
-                TransferOwnershipOfHarbergerAtSecond(_amount);
-            } else {
-                harbergerInfo.owner = issuer;
-                harbergerInfo.finalPrice = harbergerInfo.initialPrice;
-
-                //first sale
-                TransferOwnershipOfHarbergerAtFirst(_amount);               
-            }
+            //second sale
+            TransferOwnershipOfHarbergerAtSecond(_amount);
         }
     }
 
@@ -275,7 +269,7 @@ contract HarbergerTaxed_v8 is Ownable, ReentrancyGuard {
      * @notice Set ownership time
      * @param _days days of ownership
      */
-    function setOwnershipPeriod(uint32 _days) public {
+    function setOwnershipPeriod(uint32 _days) public onlyIssuer {
         uint32 ownershipPeriod = _days * SECONDS_IN_DAY;
         harbergerInfo.ownershipPeriod = ownershipPeriod;
         emit OwnershipPeriodChangedEvent(ownershipPeriod);
