@@ -9,12 +9,12 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 /**
  * @title HarbergerTaxed_v1
  */
-contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
+contract HarbergerTaxed_v13 is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     struct HarbergerInfo {
-        // wallet address of owner
-        address owner;
+        // wallet address of current owner
+        address currentOwner;
         // duration of the ownership in seconds
         uint32 ownershipPeriod;
         // timestamp when ownership started
@@ -27,14 +27,14 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
         uint16 harbergerTax;
         // value of Initial Price
         uint256 initialPrice;
-        // value of final Price
-        uint256 finalPrice;
+        // value of previous auction Price
+        uint256 previousAuctionPrice;
         // value of string will be sold
         string valueOfString;
     }
 
     // address of the ERC20 token
-    IERC20 private _token;
+    // IERC20 private _token;
 
     address public issuer;
 
@@ -68,18 +68,21 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
         _;
     }
 
-    modifier onlyOwnerOfHarberger() {
-        require(getOwner() == msg.sender, "You are not the owner of Harberger");
+    modifier onlyCurrentOwnerOfHarberger() {
+        require(getCurrentOwner() == msg.sender, "You are not the current owner of Harberger");
         _;
     }
 
+    receive() external payable { }
+
+    fallback() external payable { }        
+
     /**
      * @dev Creates a vesting contract.
-     * @param token_ address of the ERC20 token contract
      */
-    constructor(address token_) {
+    constructor() {
 
-        _token = IERC20(token_);
+        // _token = IERC20(token_);
 
         issuer = msg.sender;
 
@@ -96,7 +99,7 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
         // value of Harberger Tx
         uint16 harbergerTax = 10;
         // value of Initial Price
-        uint256 initialPrice = 100 * (10 ** decimals);
+        uint256 initialPrice = 0.001 ether;
         // value of string
         string memory valueOfString = "first string";
 
@@ -130,7 +133,7 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
         uint16 _harbergerTax,
         uint256 _initialPrice,
         string memory _valueOfString
-    ) internal onlyOwner {
+    ) internal onlyIssuer {
         require(_ownershipPeriod > 0, "Ownership period must be > 0");
         require(_startTime >= block.timestamp, "Ownership start time must be after the present");
         require(_initialPrice > 0, "Initial Price must be > 0");
@@ -144,8 +147,7 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
             _harbergerHike,
             _harbergerTax,
             _initialPrice,
-            // _initialPrice,
-            _initialPrice,
+            0,//previousAuctionPrice
             _valueOfString
         );
     }
@@ -154,9 +156,9 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
         return issuer;
     }
 
-    function getOwner() public view returns (address) {
+    function getCurrentOwner() public view returns (address) {
         if (harbergerInfo.endTime > block.timestamp)
-            return harbergerInfo.owner;
+            return harbergerInfo.currentOwner;
         else 
             return issuer;
     }
@@ -179,7 +181,7 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
     }
 
     function getCurrentPrice() public view returns (uint256) {
-        return harbergerInfo.finalPrice;
+        return harbergerInfo.previousAuctionPrice;
     }
 
     function getValueOfString() public view returns (string memory) {
@@ -187,38 +189,27 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Transfer ownership of string to other wallet
-     * @param _amount amount of tokens to pay for ownership
-     */
-    function TransferOwnershipOfHarberger(uint256 _amount) public {
-        address owner = getOwner();
-
-        if (owner == issuer) {
-            //first sale
-            TransferOwnershipOfHarbergerAtFirst(_amount);
-        } else {
-            //second sale
-            TransferOwnershipOfHarbergerAtSecond(_amount);
-        }
-    }
-
-
-    /**
      * @notice Transfer ownership of string to other wallet at first
-     * @param _amount amount of tokens to pay for ownership at first
+     * @param _newAuctionPrice auction price of Ether to pay for ownership at first
      */
-    function TransferOwnershipOfHarbergerAtFirst(uint256 _amount) public {
+    function TransferOwnershipOfHarbergerAtFirst(uint256 _newAuctionPrice) public payable {
         uint256 initialPrice = harbergerInfo.initialPrice;
-        uint256 harbergerTax = harbergerInfo.harbergerTax;
-        require(_amount >= initialPrice, "Token amount is not enough");
+        uint256 harbergerHike = harbergerInfo.harbergerHike;
+        // require(_amount >= initialPrice + initialPrice * harbergerHike, "Token amount is not enough");
+        require(_newAuctionPrice >= initialPrice, "Auction Price should be bigger than initial price when first sale");
+        require(msg.value >= _newAuctionPrice + _newAuctionPrice * harbergerHike / 100, "Ether amount is not enough");
 
-        uint256 finalPrice = _amount + _amount * harbergerTax / 100;
+        // _token.transferFrom(msg.sender, issuer, finalPrice);
 
-        _token.transferFrom(msg.sender, issuer, finalPrice);
-        harbergerInfo.owner = msg.sender;
+        // (bool sent, bytes memory data) = payable(issuer).call{value: msg.value}("");
+        (bool sent, ) = payable(issuer).call{value: msg.value}("");
+        require(sent, "Failed to send Ether");  
+
+        // payable(issuer).send(msg.value);
+        harbergerInfo.currentOwner = msg.sender;
         harbergerInfo.startTime = block.timestamp;
         harbergerInfo.endTime = block.timestamp + harbergerInfo.ownershipPeriod;
-        harbergerInfo.finalPrice = finalPrice;
+        harbergerInfo.previousAuctionPrice = _newAuctionPrice;
 
         emit OwnershipChangedEvent(msg.sender);
     }
@@ -226,16 +217,21 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
     /**
      * @notice Delay endTime of ownership
      */
-    function DelayEndTimeOfOwnership() public notIssuer onlyOwnerOfHarberger {
+    function DelayEndTimeOfOwnership() public notIssuer onlyCurrentOwnerOfHarberger payable {
         uint256 endTime = harbergerInfo.endTime;
         uint256 harbergerTax = harbergerInfo.harbergerTax;
-        uint256 initialPrice = harbergerInfo.initialPrice;
+        uint256 currentAuctionPrice = harbergerInfo.previousAuctionPrice;
         uint256 ownershipPeriod = harbergerInfo.ownershipPeriod;
         uint256 currentTime = block.timestamp;
 
-        uint256 _amount = initialPrice * harbergerTax / 100;
+        uint256 delayPrice = currentAuctionPrice * harbergerTax / 100;
         require(endTime - currentTime < ownershipPeriod, "You have already delayed end time of ownership");
-        _token.transferFrom(msg.sender, issuer, _amount);
+        // _token.transferFrom(msg.sender, issuer, _amount);
+        require(msg.value >= delayPrice, "Ether amount is not enough");
+
+        (bool sent, ) = payable(issuer).call{value: msg.value}("");
+        require(sent, "Failed to send Ether");        
+        // payable(issuer).send(msg.value);        
         harbergerInfo.endTime = endTime + ownershipPeriod;
 
         emit DelayEndTimeOfOwnershipEvent(msg.sender);
@@ -243,23 +239,32 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
 
     /**
      * @notice Transfer ownership of string to other wallet at second phase
-     * @param _amount amount of tokens to pay for ownership at second phase
+     * @param _newAuctionPrice auction price of Ether to pay for ownership at second phase
      */
-    function TransferOwnershipOfHarbergerAtSecond(uint256 _amount) public {
-        uint256 finalPrice = harbergerInfo.finalPrice;
+    function TransferOwnershipOfHarbergerAtSecond(uint256 _newAuctionPrice) public payable {
+        uint256 previousAuctionPrice = harbergerInfo.previousAuctionPrice;
         uint16 harbergerTax = harbergerInfo.harbergerTax;
         uint16 harbergerHike = harbergerInfo.harbergerHike;
         uint256 ownershipPeriod = harbergerInfo.ownershipPeriod;
-        address owner = harbergerInfo.owner;
+        address currentOwner = getCurrentOwner();
 
-        require(_amount >= finalPrice + finalPrice * harbergerHike / 100, "Token amount is not enough");
-        _token.transferFrom(msg.sender, issuer, _amount * harbergerTax / 100);
-        _token.transferFrom(msg.sender, owner, _amount + _amount * harbergerHike / 100);
+        require(_newAuctionPrice >= previousAuctionPrice + previousAuctionPrice * harbergerTax / 100, "Auction price should be bigger.");
 
-        harbergerInfo.owner = msg.sender;
+        // require(_amount >= finalPrice + finalPrice * harbergerHike / 100, "Token amount is not enough");
+        require(msg.value >= _newAuctionPrice + _newAuctionPrice * harbergerHike / 100 + _newAuctionPrice * harbergerTax / 100, "Ether amount is not enough");
+        // _token.transferFrom(msg.sender, issuer, _amount * harbergerTax / 100);
+        // _token.transferFrom(msg.sender, currentOwner, _amount + _amount * harbergerHike / 100);
+
+        (bool sent, ) = payable(issuer).call{value: _newAuctionPrice * harbergerTax / 100}("");
+        require(sent, "Failed to send Ether");
+
+        (sent, ) = payable(currentOwner).call{value: _newAuctionPrice + _newAuctionPrice * harbergerHike / 100}("");
+        require(sent, "Failed to send Ether");        
+
+        harbergerInfo.currentOwner = msg.sender;
         harbergerInfo.startTime = block.timestamp;
         harbergerInfo.endTime = block.timestamp + ownershipPeriod;
-        harbergerInfo.finalPrice = _amount + _amount * harbergerHike / 100 + _amount * harbergerTax / 100;
+        harbergerInfo.previousAuctionPrice = _newAuctionPrice;
 
         emit OwnershipChangedEvent(msg.sender);
     }
@@ -274,23 +279,23 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
         emit OwnershipPeriodChangedEvent(ownershipPeriod);
     }
 
-    function getTokenAddress() public onlyIssuer view returns (address) {
-        return address(_token);
-    }
+    // function getTokenAddress() public onlyIssuer view returns (address) {
+    //     return address(_token);
+    // }
 
-    /**
-     * @notice Creates a new vesting schedule for an account.
-     * @param token_ address of token
-     */
-    function setTokenAddress(address token_) public onlyIssuer {
-        _token = IERC20(token_);
-    }
+    // /**
+    //  * @notice Creates a new vesting schedule for an account.
+    //  * @param token_ address of token
+    //  */
+    // function setTokenAddress(address token_) public onlyIssuer {
+    //     _token = IERC20(token_);
+    // }
 
     /**
      * @notice Updates value of string
      * @param _valueOfString value of string to be updated
      */
-    function setValueOfString(string memory _valueOfString) public onlyOwnerOfHarberger {
+    function setValueOfString(string memory _valueOfString) public onlyCurrentOwnerOfHarberger {
         harbergerInfo.valueOfString = _valueOfString;
         emit ValueOfStringChangedEvent(_valueOfString);
     }
@@ -314,14 +319,10 @@ contract HarbergerTaxed_v10 is Ownable, ReentrancyGuard {
             harbergerInfo.harbergerHike = _harbergerHike;
             harbergerInfo.harbergerTax = _harbergerTax;
             harbergerInfo.initialPrice = _initialPrice;
-            if (keccak256(abi.encodePacked((_valueOfString))) != keccak256(abi.encodePacked(('Owner is not issuer'))))
-            // if (_valueOfString != 'Owner is not issuer') 
+            if (keccak256(abi.encodePacked((_valueOfString))) != keccak256(abi.encodePacked(('Current owner is not the issuer'))))
+            // if (_valueOfString != 'Current owner is not the issuer') 
                 harbergerInfo.valueOfString = _valueOfString;
 
             emit ValueOfSettingsChangedEvent();
     }
-
-    // function getCurrentTimeStamp() public view returns (uint256) {
-    //     return block.timestamp;
-    // }
 }

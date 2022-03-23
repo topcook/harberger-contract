@@ -14,10 +14,8 @@ async function main() {
   // await hre.run('compile');
 
   // We get the contract to deploy
-  const HarbergerTax = await hre.ethers.getContractFactory("HarbergerTaxed_v10");
-  const harbergerTax = await HarbergerTax.deploy(
-    '0x09AE949950905cDd9b07EF7ba866bBa9d31Dd0FB'
-  );
+  const HarbergerTax = await hre.ethers.getContractFactory("HarbergerTaxed_v13");
+  const harbergerTax = await HarbergerTax.deploy();
 
   await harbergerTax.deployed();
 
